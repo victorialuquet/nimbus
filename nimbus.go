@@ -6,13 +6,16 @@
 //
 //	ctx := context.Background()
 //
-//	1. Load app env config
+// //	1. Load app env config
+//
 //	ctx, err := nimbus.SetupEnv[AppConfig](ctx)
 //
-//	2. Load cloud providers declared in PROVIDERS=aws,gcp
+// //	2. Load cloud providers declared in PROVIDERS=aws,gcp
+//
 //	ctx, err = nimbus.SetupProviders(ctx)
 //
-//	3. Retrieve anywhere downstream
+// //	3. Retrieve anywhere downstream
+//
 //	awsCfg, err := nimbus.Retrieve[*aws.Config](ctx)
 package nimbus
 
