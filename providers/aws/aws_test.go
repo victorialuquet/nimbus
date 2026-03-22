@@ -248,3 +248,52 @@ func TestProvider_Load_sdkConfig(t *testing.T) {
 		t.Errorf("Config().Region = %q, want sa-east-1", cfg.Region)
 	}
 }
+
+func TestProvider_Load_withProfile(t *testing.T) {
+	orig := envparse.OSLookuper
+	envparse.OSLookuper = func(key string) (string, bool) {
+		kv := map[string]string{
+			"AWS_REGION":  "eu-central-1",
+			"AWS_PROFILE": "myprofile",
+		}
+		v, ok := kv[key]
+		return v, ok
+	}
+	t.Cleanup(func() { envparse.OSLookuper = orig })
+
+	p := &Provider{}
+	// Load will call config.WithSharedConfigProfile — it may fail if the profile
+	// doesn't exist on disk, but the branch is still exercised.
+	_ = p.Load(context.Background())
+
+	if p.p.Profile != "myprofile" {
+		t.Errorf("p.p.Profile = %q, want myprofile", p.p.Profile)
+	}
+}
+
+func TestProvider_Load_withEndpoint(t *testing.T) {
+	orig := envparse.OSLookuper
+	envparse.OSLookuper = func(key string) (string, bool) {
+		kv := map[string]string{
+			"AWS_REGION":            "us-east-1",
+			"AWS_ACCESS_KEY_ID":     "test",
+			"AWS_SECRET_ACCESS_KEY": "test",
+			"AWS_ENDPOINT":          "http://localhost:4566",
+		}
+		v, ok := kv[key]
+		return v, ok
+	}
+	t.Cleanup(func() { envparse.OSLookuper = orig })
+
+	p := &Provider{}
+	if err := p.Load(context.Background()); err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if p.p.Endpoint != "http://localhost:4566" {
+		t.Errorf("p.p.Endpoint = %q, want http://localhost:4566", p.p.Endpoint)
+	}
+	if p.sdkCfg.Region != "us-east-1" {
+		t.Errorf("sdkCfg.Region = %q, want us-east-1", p.sdkCfg.Region)
+	}
+}

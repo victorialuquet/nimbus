@@ -1,6 +1,8 @@
 package gcp
 
 import (
+	"context"
+	"os"
 	"testing"
 
 	"github.com/victorialuquet/nimbus/internal/envparse"
@@ -132,6 +134,101 @@ func TestPrefixedLookuper(t *testing.T) {
 		}()
 		l("UNEXPECTED_KEY")
 	})
+}
+
+// ── Load (full — params + ADC stub via GOOGLE_APPLICATION_CREDENTIALS) ────────
+
+func TestProvider_Load_full(t *testing.T) {
+	// Write a minimal service-account JSON to a temp file so credentials.DetectDefault
+	// picks it up via GOOGLE_APPLICATION_CREDENTIALS without real network I/O.
+	saJSON := `{
+		"type": "service_account",
+		"project_id": "test-project",
+		"private_key_id": "key1",
+		"private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA2a2rwplBQLzHPZe5TSd1j9DKhEzs1XGQokiJsFkRPMQQrpLn\noJKRVMhFTDkEjFj7sBoAEDMtCpxehCCXmtRMG2DKmhKCEuZUDDkFEF/iq2XBsHXq\nAMMJVHzPxHMWYAMuZLPHFqGDZmVxGJBBDEVcM3GnINdweBZhT0FBGn5YO8KnIWFQ\nj3V8ym2G0K4C7X3p6HKyX6VxKZ/xYbUTf3H5v3eMeECe6jXEtb3b0pJCvjpAK9J\nP9X1Bi/o2fBoLLVbwp5gCr3C6MOI7Mn1uyBMkDfN1LmUJTjJc2RMqN5yYCv9fNL8\n3bOFo9L1DGCkMYWkPT9QKSO2GPVQQ+Ly/+6LFwIDAQABAoIBAHjCPkTRVFxqSCGE\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n-----END RSA PRIVATE KEY-----\n",
+		"client_email": "test@test-project.iam.gserviceaccount.com",
+		"client_id": "123456789",
+		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+		"token_uri": "https://oauth2.googleapis.com/token"
+	}`
+
+	dir := t.TempDir()
+	keyFile := dir + "/sa.json"
+	if err := os.WriteFile(keyFile, []byte(saJSON), 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	orig := envparse.OSLookuper
+	envparse.OSLookuper = func(key string) (string, bool) {
+		kv := map[string]string{
+			"GCP_PROJECT_ID":               "test-project",
+			"GOOGLE_APPLICATION_CREDENTIALS": keyFile,
+		}
+		v, ok := kv[key]
+		return v, ok
+	}
+	t.Cleanup(func() { envparse.OSLookuper = orig })
+
+	// Also set the real env var so the GCP auth library can find the file.
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", keyFile)
+
+	p := &Provider{}
+	if err := p.Load(context.Background()); err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if p.creds == nil {
+		t.Fatal("Load() left creds nil")
+	}
+
+	// Config() must return the credentials.
+	if p.Config() != p.creds {
+		t.Error("Config() returned a different value than p.creds")
+	}
+}
+
+// ── Load with prefix (full) ────────────────────────────────────────────────────
+
+func TestProvider_Load_full_prefixed(t *testing.T) {
+	dir := t.TempDir()
+	keyFile := dir + "/sa.json"
+	saJSON := `{
+		"type": "service_account",
+		"project_id": "prod-project",
+		"private_key_id": "key1",
+		"private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA2a2rwplBQLzHPZe5TSd1j9DKhEzs1XGQokiJsFkRPMQQrpLn\noJKRVMhFTDkEjFj7sBoAEDMtCpxehCCXmtRMG2DKmhKCEuZUDDkFEF/iq2XBsHXq\nAMMJVHzPxHMWYAMuZLPHFqGDZmVxGJBBDEVcM3GnINdweBZhT0FBGn5YO8KnIWFQ\nj3V8ym2G0K4C7X3p6HKyX6VxKZ/xYbUTf3H5v3eMeECe6jXEtb3b0pJCvjpAK9J\nP9X1Bi/o2fBoLLVbwp5gCr3C6MOI7Mn1uyBMkDfN1LmUJTjJc2RMqN5yYCv9fNL8\n3bOFo9L1DGCkMYWkPT9QKSO2GPVQQ+Ly/+6LFwIDAQABAoIBAHjCPkTRVFxqSCGE\nxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n-----END RSA PRIVATE KEY-----\n",
+		"client_email": "test@prod-project.iam.gserviceaccount.com",
+		"client_id": "123456789",
+		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+		"token_uri": "https://oauth2.googleapis.com/token"
+	}`
+	if err := os.WriteFile(keyFile, []byte(saJSON), 0600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	fakeOS := map[string]string{
+		"GCP_PROD_PROJECT_ID": "prod-project",
+	}
+	orig := envparse.OSLookuper
+	envparse.OSLookuper = func(key string) (string, bool) {
+		v, ok := fakeOS[key]
+		return v, ok
+	}
+	t.Cleanup(func() { envparse.OSLookuper = orig })
+
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", keyFile)
+
+	p := NewProvider("gcp-prod", "GCP_PROD_")
+	if err := p.Load(context.Background()); err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if p.p.ProjectID != "prod-project" {
+		t.Errorf("ProjectID = %q, want prod-project", p.p.ProjectID)
+	}
+	if p.creds == nil {
+		t.Fatal("Load() left creds nil")
+	}
 }
 
 // ── Load (params parsing only) ────────────────────────────────────────────────

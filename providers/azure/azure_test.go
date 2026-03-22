@@ -210,6 +210,99 @@ func TestPrefixedLookuper(t *testing.T) {
 	})
 }
 
+// ── Load (full — params + credential construction) ────────────────────────────
+
+func TestProvider_Load_full(t *testing.T) {
+	tests := []struct {
+		name     string
+		kv       map[string]string
+		wantCred string
+	}{
+		{
+			name: "service principal",
+			kv: map[string]string{
+				"AZURE_SUBSCRIPTION_ID": "sub-123",
+				"AZURE_TENANT_ID":       "tenant-abc",
+				"AZURE_CLIENT_ID":       "client-xyz",
+				"AZURE_CLIENT_SECRET":   "secret",
+			},
+			wantCred: "*azidentity.ClientSecretCredential",
+		},
+		{
+			name: "managed identity",
+			kv: map[string]string{
+				"AZURE_SUBSCRIPTION_ID": "sub-123",
+				"AZURE_CLIENT_ID":       "client-xyz",
+			},
+			wantCred: "*azidentity.ManagedIdentityCredential",
+		},
+		{
+			name: "default chain",
+			kv: map[string]string{
+				"AZURE_SUBSCRIPTION_ID": "sub-123",
+			},
+			wantCred: "*azidentity.DefaultAzureCredential",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			orig := envparse.OSLookuper
+			envparse.OSLookuper = func(key string) (string, bool) {
+				v, ok := tt.kv[key]
+				return v, ok
+			}
+			t.Cleanup(func() { envparse.OSLookuper = orig })
+
+			p := &Provider{}
+			if err := p.Load(nil); err != nil { //nolint:staticcheck
+				t.Fatalf("Load() error = %v", err)
+			}
+
+			if p.cred == nil {
+				t.Fatal("Load() left cred nil")
+			}
+			if got := typeName(p.cred); got != tt.wantCred {
+				t.Errorf("cred type = %q, want %q", got, tt.wantCred)
+			}
+
+			// Config() must return the same credential.
+			if p.Config() != p.cred {
+				t.Error("Config() returned a different value than p.cred")
+			}
+		})
+	}
+}
+
+// ── Load with prefix (full) ────────────────────────────────────────────────────
+
+func TestProvider_Load_full_prefixed(t *testing.T) {
+	fakeOS := map[string]string{
+		"AZURE_PROD_SUBSCRIPTION_ID": "prod-sub",
+		"AZURE_PROD_TENANT_ID":       "prod-tenant",
+		"AZURE_PROD_CLIENT_ID":       "prod-client",
+		"AZURE_PROD_CLIENT_SECRET":   "prod-secret",
+	}
+	orig := envparse.OSLookuper
+	envparse.OSLookuper = func(key string) (string, bool) {
+		v, ok := fakeOS[key]
+		return v, ok
+	}
+	t.Cleanup(func() { envparse.OSLookuper = orig })
+
+	p := NewProvider("azure-prod", "AZURE_PROD_")
+	if err := p.Load(nil); err != nil { //nolint:staticcheck
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if p.p.SubscriptionID != "prod-sub" {
+		t.Errorf("SubscriptionID = %q, want prod-sub", p.p.SubscriptionID)
+	}
+	if typeName(p.cred) != "*azidentity.ClientSecretCredential" {
+		t.Errorf("cred type = %q, want *azidentity.ClientSecretCredential", typeName(p.cred))
+	}
+}
+
 // ── Load (params parsing only) ────────────────────────────────────────────────
 
 func TestProvider_Load_prefix(t *testing.T) {
