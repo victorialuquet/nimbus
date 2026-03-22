@@ -4,7 +4,7 @@ Concise guide for AI-assisted development on this project.
 
 ## What this project is
 
-`cloudcfg` is a **typed, context-injected, multi-cloud configuration manager** for Go.
+`nimbus` is a **typed, context-injected, multi-cloud configuration manager** for Go.
 Two concerns, cleanly separated:
 
 1. **Env config** (`env/`) — parse os.Environ into a user-defined struct, validate with `go-playground/validator`.
