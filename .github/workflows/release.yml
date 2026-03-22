@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to create the GitHub Release
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true  # built from PR titles and commits since last tag
+          make_latest: true
