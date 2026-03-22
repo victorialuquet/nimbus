@@ -1,13 +1,22 @@
+<img align="right" width="300" src="docs/images/logo.png">
+
 # Nimbus
 
 Typed, context-injected, multi-cloud configuration manager for Go.
+
+[![GoDev](https://img.shields.io/static/v1?label=godev&message=reference&color=00add8)][godev]
+[![Go Report Card](https://goreportcard.com/badge/github.com/victorialuquet/nimbus)](https://goreportcard.com/report/github.com/victorialuquet/nimbus)
+![License](https://img.shields.io/github/license/victorialuquet/nimbus)
+[![CI](https://github.com/victorialuquet/nimbus/actions/workflows/ci.yml/badge.svg)](https://github.com/victorialuquet/nimbus/actions/workflows/ci.yml)
+
+[godev]: https://pkg.go.dev/github.com/victorialuquet/nimbus
 
 Nimbus loads cloud credentials from environment variables, validates them, builds
 the SDK-native config object for each provider, and injects everything into a
 `context.Context`. Downstream code retrieves what it needs by type — no globals,
 no singletons, no plumbing through function signatures.
 
-```
+```sh
 PROVIDERS=aws,gcp go run ./examples/multicloud
 ```
 
@@ -17,7 +26,7 @@ PROVIDERS=aws,gcp go run ./examples/multicloud
 go get github.com/victorialuquet/nimbus
 ```
 
-Requires Go 1.21+.
+Requires Go 1.25+.
 
 ## What nimbus returns
 
@@ -196,3 +205,60 @@ The env parser (`internal/envparse`) has zero external dependencies.
 | [`examples/multicloud/`](examples/multicloud/) | AWS + GCP providers, retrieve SDK configs |
 | [`examples/multicloud/multiregion/`](examples/multicloud/multiregion/) | Two AWS instances with env var prefixes |
 | [`examples/custom_provider/`](examples/custom_provider/) | Custom Vault provider with Ping support |
+
+## Testing
+
+```sh
+# Run all tests
+go test ./...
+
+# Run tests with coverage report
+go test -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out
+
+# Run tests for a specific package
+go test ./providers/aws/...
+go test ./internal/envparse/...
+
+# Run tests verbosely
+go test -v ./...
+```
+
+Tests never mutate `os.Environ`. All environment injection is done via
+`env.WithLookuper` or by patching `envparse.OSLookuper` in a `t.Cleanup`
+callback — safe to run in parallel.
+
+## Contributing
+
+1. **Fork and clone** the repository.
+2. **Create a branch** for your change: `git checkout -b feat/my-thing`.
+3. **Write tests first.** Every new export and bug fix must have a test.
+   - Inject fake environments via `envparse.Lookuper` — do not call `os.Setenv` in tests.
+   - Use `t.Cleanup` to restore any patched package-level variables.
+   - Prefer table-driven tests for logic with multiple cases.
+4. **Run the full suite** before opening a PR:
+   ```sh
+   go vet ./...
+   go test ./...
+   ```
+5. **Open a pull request.** CI runs `go vet` and `go test ./...` automatically on every push.
+
+### Adding a new built-in provider
+
+1. Create `providers/<name>/<name>.go` with a `params` struct (unexported) and a `Provider` struct.
+2. Implement `Name()`, `Load(ctx)`, `Validate()`, `Config()`.
+3. Register in `provider/catalog.go → builtinCatalog()`.
+4. Add env var documentation in the package doc comment.
+5. Write a test file covering `Name`, `Validate`, `prefixedLookuper`, and `Load`.
+
+### Optional provider interfaces
+
+| Interface     | Method                 | When to implement                  |
+|---------------|------------------------|------------------------------------|
+| `Refreshable` | `Refresh(ctx) error`   | Short-lived or rotating credentials|
+| `Observable`  | `Ping(ctx) error`      | When a connectivity check is useful|
+| `Dependent`   | `DependsOn() []string` | Provider needs another loaded first|
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
