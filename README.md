@@ -6,7 +6,7 @@ Typed, context-injected, multi-cloud configuration manager for Go.
 
 [![GoDev](https://img.shields.io/static/v1?label=godev&message=reference&color=00add8)][godev]
 [![Go Report Card](https://goreportcard.com/badge/github.com/victorialuquet/nimbus)](https://goreportcard.com/report/github.com/victorialuquet/nimbus)
-![License](https://img.shields.io/github/license/victorialuquet/nimbus)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 [![CI](https://github.com/victorialuquet/nimbus/actions/workflows/ci.yml/badge.svg)](https://github.com/victorialuquet/nimbus/actions/workflows/ci.yml)
 
 [godev]: https://pkg.go.dev/github.com/victorialuquet/nimbus
