@@ -26,8 +26,8 @@ type contextKey struct{}
 type Option func(*setupOptions)
 
 type setupOptions struct {
-	extra    []Provider
-	pingAll  bool
+	extra   []Provider
+	pingAll bool
 	onLoad  func(name string)
 	onError func(name string, err error)
 }

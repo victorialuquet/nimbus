@@ -161,7 +161,7 @@ func TestProvider_Load_full(t *testing.T) {
 	orig := envparse.OSLookuper
 	envparse.OSLookuper = func(key string) (string, bool) {
 		kv := map[string]string{
-			"GCP_PROJECT_ID":               "test-project",
+			"GCP_PROJECT_ID":                 "test-project",
 			"GOOGLE_APPLICATION_CREDENTIALS": keyFile,
 		}
 		v, ok := kv[key]

@@ -12,19 +12,19 @@ import (
 
 // stubProvider is a minimal Provider implementation used across all registry tests.
 type stubProvider struct {
-	name       string
-	loadErr    error
+	name        string
+	loadErr     error
 	validateErr error
-	cfg        any
-	pingErr    error
-	deps       []string
-	loadCalled bool
+	cfg         any
+	pingErr     error
+	deps        []string
+	loadCalled  bool
 }
 
-func (p *stubProvider) Name() string                   { return p.name }
-func (p *stubProvider) Load(_ context.Context) error   { p.loadCalled = true; return p.loadErr }
-func (p *stubProvider) Validate() error                 { return p.validateErr }
-func (p *stubProvider) Config() any                     { return p.cfg }
+func (p *stubProvider) Name() string                 { return p.name }
+func (p *stubProvider) Load(_ context.Context) error { p.loadCalled = true; return p.loadErr }
+func (p *stubProvider) Validate() error              { return p.validateErr }
+func (p *stubProvider) Config() any                  { return p.cfg }
 
 // stubObservable extends stubProvider with Ping support.
 type stubObservable struct {

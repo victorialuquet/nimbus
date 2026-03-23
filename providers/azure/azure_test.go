@@ -158,8 +158,8 @@ func TestPrefixedLookuper(t *testing.T) {
 	// With prefix "AZURE_PROD_", "AZURE_SUBSCRIPTION_ID" → "AZURE_PROD_SUBSCRIPTION_ID" only —
 	// no fallback to the unprefixed key.
 	fakeOS := map[string]string{
-		"AZURE_SUBSCRIPTION_ID":      "base-sub",   // must NOT be used when prefix is set
-		"AZURE_PROD_SUBSCRIPTION_ID": "prod-sub",   // rewritten key
+		"AZURE_SUBSCRIPTION_ID":      "base-sub",    // must NOT be used when prefix is set
+		"AZURE_PROD_SUBSCRIPTION_ID": "prod-sub",    // rewritten key
 		"AZURE_PROD_TENANT_ID":       "prod-tenant", // rewritten key, no base equivalent
 	}
 	orig := envparse.OSLookuper

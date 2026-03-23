@@ -62,7 +62,7 @@ func TestProvider_Validate(t *testing.T) {
 		{
 			name: "role ARN only",
 			kv: map[string]string{
-				"AWS_REGION":  "us-east-1",
+				"AWS_REGION":   "us-east-1",
 				"AWS_ROLE_ARN": "arn:aws:iam::123456789012:role/MyRole",
 			},
 		},

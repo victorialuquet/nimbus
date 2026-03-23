@@ -40,9 +40,9 @@ import (
 // params holds the raw environment inputs.
 // It is not exported — callers interact with [auth.Credentials] directly.
 type params struct {
-	ProjectID   string `env:"GCP_PROJECT_ID,required"`
-	Region      string `env:"GCP_REGION"`
-	Zone        string `env:"GCP_ZONE"`
+	ProjectID string `env:"GCP_PROJECT_ID,required"`
+	Region    string `env:"GCP_REGION"`
+	Zone      string `env:"GCP_ZONE"`
 }
 
 // Provider implements [provider.Provider] for GCP.

@@ -16,7 +16,9 @@ func fakeLookuper(kv map[string]string) Lookuper {
 // ── Process — non-struct input ─────────────────────────────────────────────
 
 func TestProcess_nonPointer(t *testing.T) {
-	var s struct{ X string `env:"X"` }
+	var s struct {
+		X string `env:"X"`
+	}
 	if err := Process(s, fakeLookuper(nil)); err == nil {
 		t.Error("expected error for non-pointer dst, got nil")
 	}
